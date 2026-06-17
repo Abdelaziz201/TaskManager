@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="TaskManager.Applab.Api/TaskManager.Applab.Api.csproj" />
+  <Project Path="TaskManager.Applab.Application/TaskManager.Applab.Application.csproj" />
+  <Project Path="TaskManager.Applab.Domain/TaskManager.Applab.Domain.csproj" />
+  <Project Path="TaskManager.Applab.Persistence/TaskManager.Applab.Persistence.csproj" />
+</Solution>
