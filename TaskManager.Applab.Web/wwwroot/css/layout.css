@@ -1,0 +1,60 @@
+﻿/* ── layout.css  (shared across all pages) ── */
+
+:root {
+    --purple: #4F46E5;
+    --purple-dark: #4338CA;
+    --gray-light: #F9FAFB;
+    --gray-border: #E5E7EB;
+}
+
+body {
+    background-color: var(--gray-light);
+    font-family: 'Segoe UI', sans-serif;
+}
+
+/* Navbar */
+.navbar {
+    background: white !important;
+    border-bottom: 1px solid var(--gray-border);
+    padding: 1rem 2rem;
+}
+
+.navbar-brand span {
+    color: var(--purple);
+    font-weight: 700;
+    font-size: 1.3rem;
+}
+
+/* Buttons */
+.btn-purple {
+    background-color: var(--purple);
+    color: white;
+    border: none;
+}
+
+    .btn-purple:hover {
+        background-color: var(--purple-dark);
+        color: white;
+    }
+
+/* Cards */
+.card {
+    border: 1px solid var(--gray-border);
+    border-radius: 12px;
+}
+
+/* Status badges */
+.badge-todo {
+    background-color: #F3F4F6;
+    color: #374151;
+}
+
+.badge-inprogress {
+    background-color: #FEF3C7;
+    color: #92400E;
+}
+
+.badge-done {
+    background-color: #D1FAE5;
+    color: #065F46;
+}

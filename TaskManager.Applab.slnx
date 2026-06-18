@@ -3,4 +3,5 @@
   <Project Path="TaskManager.Applab.Application/TaskManager.Applab.Application.csproj" />
   <Project Path="TaskManager.Applab.Domain/TaskManager.Applab.Domain.csproj" />
   <Project Path="TaskManager.Applab.Persistence/TaskManager.Applab.Persistence.csproj" />
+  <Project Path="TaskManager.Applab.Web/TaskManager.Applab.Web.csproj" Id="d5359591-27d5-4857-b5f2-8f490d9109aa" />
 </Solution>

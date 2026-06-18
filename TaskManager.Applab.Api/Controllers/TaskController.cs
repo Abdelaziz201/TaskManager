@@ -57,6 +57,8 @@ namespace TaskManager.Applab.Api.Controllers
             task.Title = dto.Title;
             task.Description = dto.Description;
             task.DueDate = dto.DueDate;
+            task.Status = dto.Status;
+
 
             await _taskService.UpdateTaskAsync(task);
             return Ok(task);

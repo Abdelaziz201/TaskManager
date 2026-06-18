@@ -1,0 +1,36 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - TaskManager</title>
+    <link rel="stylesheet" href="@(Url.Content("~/lib/bootstrap/dist/css/bootstrap.min.css"))" />
+    <link rel="stylesheet" href="@(Url.Content("~/css/layout.css"))" asp-append-version="true" />
+    <link rel="stylesheet" href="@(Url.Content("~/css/site.css"))" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body>
+    <nav class="navbar navbar-expand-sm">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <span>⬡ TaskManager</span>
+            </a>
+            @if (Context.Session.GetString("JwtToken") != null)
+            {
+                <div class="d-flex align-items-center gap-3">
+                    <span class="text-muted">@Context.Session.GetString("Username")</span>
+                    <a asp-controller="Account" asp-action="Logout" class="text-muted text-decoration-none">→ Logout</a>
+                </div>
+            }
+        </div>
+    </nav>
+
+    <main>
+        @RenderBody()
+    </main>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

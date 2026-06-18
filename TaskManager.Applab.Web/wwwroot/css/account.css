@@ -1,0 +1,148 @@
+﻿/* ── account.css  (Login & Register pages) ── */
+
+.account-wrapper {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--gray-light);
+    padding: 2rem 1rem;
+}
+
+.account-icon {
+    width: 64px;
+    height: 64px;
+    background-color: var(--purple);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.25rem;
+}
+
+    .account-icon svg {
+        color: white;
+        width: 28px;
+        height: 28px;
+    }
+
+.account-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 0.25rem;
+}
+
+.account-subtitle {
+    color: #6B7280;
+    font-size: 0.95rem;
+    margin-bottom: 2rem;
+}
+
+.account-card {
+    background: white;
+    border: 1px solid var(--gray-border);
+    border-radius: 16px;
+    padding: 2rem;
+    width: 100%;
+    max-width: 480px;
+}
+
+    /* input groups */
+    .account-card .form-label {
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 0.4rem;
+    }
+
+.input-icon-wrap {
+    position: relative;
+}
+
+    .input-icon-wrap svg {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 18px;
+        height: 18px;
+        color: #9CA3AF;
+    }
+
+    .input-icon-wrap input {
+        padding-left: 2.5rem;
+        border-radius: 10px;
+        border: 1px solid var(--gray-border);
+        height: 48px;
+    }
+
+        .input-icon-wrap input:focus {
+            border-color: var(--purple);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+            outline: none;
+        }
+
+/* submit button */
+.btn-account {
+    background-color: var(--purple);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    height: 48px;
+    font-weight: 600;
+    font-size: 1rem;
+    width: 100%;
+    transition: background-color 0.2s;
+}
+
+    .btn-account:hover {
+        background-color: var(--purple-dark);
+        color: white;
+    }
+
+/* divider */
+.account-divider {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: #9CA3AF;
+    font-size: 0.85rem;
+    margin: 1.25rem 0;
+}
+
+    .account-divider::before,
+    .account-divider::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: var(--gray-border);
+    }
+
+/* footer link */
+.account-footer {
+    margin-top: 1.5rem;
+    color: #6B7280;
+    font-size: 0.9rem;
+}
+
+    .account-footer a {
+        color: var(--purple);
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+        .account-footer a:hover {
+            text-decoration: underline;
+        }
+
+/* forgot password link */
+.forgot-link {
+    color: var(--purple);
+    font-size: 0.85rem;
+    text-decoration: none;
+}
+
+    .forgot-link:hover {
+        text-decoration: underline;
+    }
