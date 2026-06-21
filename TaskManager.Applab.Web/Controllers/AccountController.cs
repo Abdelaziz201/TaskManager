@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.Net.Http.Json;
 using TaskManager.Applab.Web.Models;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace TaskManager.Applab.Web.Controllers;
 
@@ -29,12 +30,23 @@ public class AccountController : Controller
             model.Password
         });
 
-        if (!response.IsSuccessStatusCode)
-            return BadRequest(new { message = "Invalid email or password" });
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse<string>>();
 
-        var result = await response.Content.ReadFromJsonAsync<TokenResponse>();
-        HttpContext.Session.SetString("JwtToken", result!.Token);
-        HttpContext.Session.SetString("Username", model.Email);
+        if (!response.IsSuccessStatusCode || result == null || !result.Success)
+            return BadRequest(new { message = result?.Message ?? "Invalid email or password" });
+
+
+        var token = result.Data!;
+        HttpContext.Session.SetString("JwtToken", token);
+
+        var handler = new JwtSecurityTokenHandler();
+        var jwtToken = handler.ReadJwtToken(token);
+        var username = jwtToken.Claims.FirstOrDefault(c => c.Type == "unique_name" || c.Type == System.Security.Claims.ClaimTypes.Name)?.Value
+                       ?? model.Email;
+
+        HttpContext.Session.SetString("Username", username);
+
+
 
         return Ok(new { redirectUrl = Url.Action("Index", "Task") });
     }
@@ -56,12 +68,20 @@ public class AccountController : Controller
             model.Password
         });
 
-        if (!response.IsSuccessStatusCode)
-            return BadRequest(new { message = "Email already exists" });
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse<string>>();
 
-        var result = await response.Content.ReadFromJsonAsync<TokenResponse>();
-        HttpContext.Session.SetString("JwtToken", result!.Token);
-        HttpContext.Session.SetString("Username", model.Username);
+        if (!response.IsSuccessStatusCode || result == null || !result.Success)
+            return BadRequest(new { message = result?.Message ?? "Registration failed" });
+
+        var token = result.Data!;
+        HttpContext.Session.SetString("JwtToken", token);
+
+        var handler = new JwtSecurityTokenHandler();
+        var jwtToken = handler.ReadJwtToken(token);
+        var username = jwtToken.Claims.FirstOrDefault(c => c.Type == "unique_name" || c.Type == System.Security.Claims.ClaimTypes.Name)?.Value
+                       ?? model.Username;
+
+        HttpContext.Session.SetString("Username", username);
 
         return Ok(new { redirectUrl = Url.Action("Index", "Task") });
     }

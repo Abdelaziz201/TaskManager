@@ -20,17 +20,15 @@ namespace TaskManager.Applab.Api.Controllers;
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterDto dto)
         {
-            var token = await _authservice.RegisterAsync(dto);
-            return Ok(new { token });
-        }
+        var result = await _authservice.RegisterAsync(dto);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
 
         //post /api/auth/login
         [HttpPost("login")]
         public async Task <IActionResult> Login([FromBody] LoginDto dto)
         {
-            var token = await _authservice.LoginAsync(dto);
-            return Ok(new { token });
-
-
-        }
+        var result = await _authservice.LoginAsync(dto);
+        return result.Success ? Ok(result) : Unauthorized(result);
+    }
     }

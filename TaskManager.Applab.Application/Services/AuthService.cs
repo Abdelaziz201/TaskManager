@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Text;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using TaskManager.Applab.Application.Common;
 using TaskManager.Applab.Application.DTOs;
 using TaskManager.Applab.Application.Interfaces;
 using TaskManager.Applab.Application.Settings;
@@ -21,10 +22,10 @@ public class AuthService
         _jwtSettings = jwtSettings.Value;
     }
 
-    public async Task<string?> RegisterAsync(RegisterDto dto)
+    public async Task<ApiResponse<string>> RegisterAsync(RegisterDto dto)
     {
         if (await _authRepository.EmailExistsAsync(dto.Email))
-            throw new InvalidOperationException("Email already exists");
+            return ApiResponse<string>.Fail("Email already exists");
 
         var user = new User
         {
@@ -34,18 +35,22 @@ public class AuthService
         };
 
         await _authRepository.AddUserAsync(user);
-        return GenerateToken(user);
+        var token = GenerateToken(user);
+
+        return ApiResponse<string>.Ok(token, "Registration successful");
     }
 
-    public async Task<string?> LoginAsync(LoginDto dto)
+    public async Task<ApiResponse<string>> LoginAsync(LoginDto dto)
     {
-        var user = await _authRepository.GetByEmailAsync(dto.Email)
-            ?? throw new UnauthorizedAccessException("Invalid email or password");
+        var user = await _authRepository.GetByEmailAsync(dto.Email);
+        if (user == null)
+            return ApiResponse<string>.Fail("Invalid email or password");
 
         if (!BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
-            throw new UnauthorizedAccessException("Invalid email or password");
+            return ApiResponse<string>.Fail("Invalid email or password");
 
-        return GenerateToken(user);
+        var token = GenerateToken(user);
+        return ApiResponse<string>.Ok(token, "Login successful");
     }
 
     private string GenerateToken(User user)

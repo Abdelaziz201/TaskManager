@@ -1,5 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using System.Reflection.Metadata.Ecma335;
+﻿using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using TaskManager.Applab.Application.DTOs;
 using TaskManager.Applab.Application.Services;
 using TaskManager.Applab.Domain.Entities;
@@ -29,8 +29,8 @@ namespace TaskManager.Applab.Api.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
-            var task = await _taskService.GetTaskByIdAsync(id);
-            return Ok(task);
+            var result = await _taskService.GetTaskByIdAsync(id);
+            return result.Success ? Ok(result) : NotFound(result);
         }
 
         //post /api/task
@@ -43,33 +43,33 @@ namespace TaskManager.Applab.Api.Controllers
                 Description = dto.Description,
                 DueDate = dto.DueDate,
             };
-            await _taskService.CreateTaskAsync(task);
-            return Ok(task);
+            var result = await _taskService.CreateTaskAsync(task);
+            return Ok(result);
         }
 
         //Put /api/task/id
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, [FromBody] CreateTaskDto dto)
         {
-            var task = await _taskService.GetTaskByIdAsync(id);
-            if (task == null) return NotFound();
+            var existing = await _taskService.GetTaskByIdAsync(id);
+            if (!existing.Success) return NotFound(existing);
 
+            var task = existing.Data!;
             task.Title = dto.Title;
             task.Description = dto.Description;
             task.DueDate = dto.DueDate;
             task.Status = dto.Status;
 
-
-            await _taskService.UpdateTaskAsync(task);
-            return Ok(task);
+            var result = await _taskService.UpdateTaskAsync(task);
+            return Ok(result);
         }
 
         //Delete /api/task/id
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            await _taskService.DeleteTaskAsync(id);
-            return Ok(new { message= "Task deleted"});
+            var result = await _taskService.DeleteTaskAsync(id);
+            return result.Success ? Ok(result) : NotFound(result);
         }
     }
 }

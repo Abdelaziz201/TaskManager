@@ -39,11 +39,18 @@ namespace TaskManager.Applab.Persistence.Repositories;
             await _context.SaveChangesAsync();
         }
 
-        //findByIdAndDelete
-        public async Task DeleteAsync(TaskItem task)
+    //findByIdAndDelete
+    public async Task DeleteAsync(TaskItem task)
+    {
+        try
         {
             _context.Tasks.Remove(task);
             await _context.SaveChangesAsync();
         }
+        catch (DbUpdateConcurrencyException)
+        {
+            // Row was already deleted by a concurrent request — safe to ignore
+        }
     }
+}
 

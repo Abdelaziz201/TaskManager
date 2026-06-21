@@ -22,13 +22,11 @@
 
 <div class="task-page">
 
-    <!-- Greeting -->
     <div class="task-greeting mb-3">
         <h1>@greeting, @username</h1>
         <p>Here's what you're working on today.</p>
     </div>
 
-    <!-- Stat Cards -->
     <div class="stat-cards">
         <div class="stat-card">
             <div class="stat-icon purple">
@@ -64,20 +62,23 @@
         </div>
     </div>
 
-    <!-- Toolbar -->
     <div class="task-toolbar">
         <div class="search-wrap">
             <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 105 11a6 6 0 0012 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 105 11a6 6 0 0012 0z" />
             </svg>
             <input type="text" id="searchInput" placeholder="Search tasks..." />
         </div>
-        <button class="btn-new-task" data-bs-toggle="modal" data-bs-target="#createTaskModal">
+        <select id="sortSelect" class="sort-select">
+            <option value="">Sort by</option>
+            <option value="dueDateAsc">Due Date (Nearest)</option>
+            <option value="dueDateDesc">Due Date (Farthest)</option>
+        </select>
+        <button class="btn-new-task" onclick="openCreateModal()">
             + New Task
         </button>
     </div>
 
-    <!-- Task Grid -->
     <div class="task-grid" id="taskGrid">
         @if (!Model.Any())
         {
@@ -99,7 +100,13 @@
                     _            => "badge-pending"
                 };
 
-                <div class="task-card" data-title="@task.Title.ToLower()">
+                <div class="task-card"
+                     data-title="@task.Title.ToLower()"
+                     data-id="@task.Id"
+                     data-task-title="@task.Title"
+                     data-task-description="@task.Description"
+                     data-task-duedate="@task.DueDate.ToString("yyyy-MM-ddTHH:mm")"
+                     data-task-status="@task.Status">
                     <h3>@task.Title</h3>
                     @if (!string.IsNullOrEmpty(task.Description))
                     {
@@ -107,24 +114,28 @@
                     }
                     <div class="task-card-footer">
                         <div class="d-flex gap-2 align-items-center flex-wrap">
-                            @Html.DropDownList(
-                                    $"status-{task.Id}",
-                                    new List<SelectListItem>
-                                    {
-                                        new SelectListItem { Text = "Pending",     Value = "Pending",    Selected = task.Status == "Pending" },
-                                        new SelectListItem { Text = "In Progress", Value = "InProgress", Selected = task.Status == "InProgress" },
-                                        new SelectListItem { Text = "Done",        Value = "Done",       Selected = task.Status == "Done" }
-                                    },
-                                    new { @class = "status-select " + badgeClass, data_task_id = task.Id, onchange = "updateStatus(this)" }
-                                )
+                            <div class="status-dropdown" data-task-id="@task.Id">
+                                <button type="button" class="status-trigger @badgeClass" onclick="toggleStatusMenu(this)">
+                                    <span class="status-label">@(task.Status == "InProgress" ? "In Progress" : task.Status)</span>
+                                    <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </button>
+                                <div class="status-menu">
+                                    <div class="status-option badge-pending" data-value="Pending" onclick="selectStatus(this)">Pending</div>
+                                    <div class="status-option badge-inprogress" data-value="InProgress" onclick="selectStatus(this)">In Progress</div>
+                                    <div class="status-option badge-done" data-value="Done" onclick="selectStatus(this)">Done</div>
+                                </div>
+                            </div>
                             <span class="task-date">
                                 <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                     <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
                                 </svg>
-                                @task.DueDate.ToString("MMM d")
+                                @task.DueDate.ToString("MMM d, HH:mm")
                             </span>
                         </div>
                         <div class="task-card-actions">
+                            <button class="btn-edit" onclick="openEditModal(this)">Edit</button>
                             <button class="btn-delete" onclick="deleteTask(@task.Id, this)">Delete</button>
                         </div>
                     </div>
@@ -134,15 +145,16 @@
     </div>
 </div>
 
-<!-- Create Task Modal -->
-<div class="modal fade" id="createTaskModal" tabindex="-1">
+<!-- Create / Edit Task Modal -->
+<div class="modal fade" id="taskModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">New Task</h5>
+                <h5 class="modal-title" id="taskModalTitle">New Task</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
+                <input type="hidden" id="taskId" value="" />
                 <div class="mb-3">
                     <label class="form-label fw-500">Title</label>
                     <input type="text" id="taskTitle" class="form-control" placeholder="Task title" />
@@ -155,14 +167,58 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Due Date</label>
-                    <input type="date" id="taskDueDate" class="form-control"
-                           min="@DateTime.Today.AddDays(1).ToString("yyyy-MM-dd")" />
+                    <input type="text" id="taskDueDate" class="form-control" placeholder="Select date and time" />
                     <span id="taskDateError" class="text-danger small"></span>
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" id="createTaskBtn" class="btn-new-task">Create Task</button>
+                <button type="button" id="saveTaskBtn" class="btn-new-task">
+                    <span id="saveTaskBtnText">Create Task</span>
+                    <span id="saveTaskSpinner" class="spinner-border spinner-border-sm ms-1" style="display:none;"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center py-4">
+                <div class="delete-icon-wrap mb-3">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                </div>
+                <h5 class="mb-2">Delete this task?</h5>
+                <p class="text-muted small mb-4">This action cannot be undone.</p>
+                <div class="d-flex gap-2 justify-content-center">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" id="confirmDeleteBtn" class="btn-delete-confirm">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Duplicate Title Confirmation Modal -->
+<div class="modal fade" id="duplicateConfirmModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center py-4">
+                <div class="warning-icon-wrap mb-3">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                </div>
+                <h5 class="mb-2">Duplicate task name</h5>
+                <p class="text-muted small mb-4" id="duplicateTitleText"></p>
+                <div class="d-flex gap-2 justify-content-center">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="reopenTaskModal()">Cancel</button>
+                    <button type="button" id="confirmDuplicateBtn" class="btn-new-task">Create Anyway</button>
+                </div>
             </div>
         </div>
     </div>
