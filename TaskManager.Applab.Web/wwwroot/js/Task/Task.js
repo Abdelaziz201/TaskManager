@@ -31,6 +31,9 @@ function renderTaskGrid(tasks) {
     const html = tasks.map(t => buildCardHtml(t)).join('');
     $('#taskGrid').html(html);
     sortTasksByDueDate($('#sortSelect').val() || 'dueDateAsc');
+
+    const activeCard = $('.stat-card.active')[0];
+    if (activeCard) filterByStatus(activeCard);
 }
 
 function toLocalDateTimeString(date) {
@@ -120,6 +123,10 @@ function selectStatus(option) {
 
             $('.status-menu').removeClass('show');
             refreshStats();
+
+            //  re-apply whatever filter is currently active
+            const activeCard = $('.stat-card.active')[0];
+            if (activeCard) filterByStatus(activeCard);
         },
         error: function () {
             alert('Failed to update status');
@@ -127,7 +134,6 @@ function selectStatus(option) {
         }
     });
 }
-
 
 //24 hs date picker
 
@@ -168,6 +174,9 @@ $('#confirmDeleteBtn').on('click', function () {
             refreshStats();
             if ($('.task-card').length === 0) showEmptyState();
             bootstrap.Modal.getInstance(document.getElementById('deleteConfirmModal'))?.hide();
+
+            const activeCard = $('.stat-card.active')[0];
+            if (activeCard) filterByStatus(activeCard);
         },
         error: function () {
             alert('Failed to delete task');
@@ -244,6 +253,66 @@ function showEmptyState() {
         </div>`);
 }
 
+
+// ───── Quick add ─────
+
+let quickAddPendingData = null;
+
+$('#quickAddInput').on('keypress', function (e) {
+    if (e.which !== 13) return; // Enter key only
+
+    const title = $(this).val().trim();
+    if (!title) return;
+
+    const isDuplicate = $('.task-card').toArray().some(card => {
+        const cardTitle = $(card).attr('data-task-title').toLowerCase();
+        return cardTitle === title.toLowerCase();
+    });
+
+    if (isDuplicate) {
+        quickAddPendingData = { title };
+        $('#duplicateTitleText').text(`A task named "${title}" already exists.`);
+        new bootstrap.Modal(document.getElementById('duplicateConfirmModal')).show();
+        return;
+    }
+
+    createQuickTask(title);
+});
+
+function createQuickTask(title) {
+    const input = $('#quickAddInput');
+    input.prop('disabled', true);
+
+    $.ajax({
+        url: '/Task/Create',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            title: title,
+            description: '',
+            dueDate: toLocalDateTimeString(new Date())
+        }),
+        success: function (task) {
+            $('.empty-state').remove();
+            $('#taskGrid').prepend(buildCardHtml(task));
+            sortTasksByDueDate($('#sortSelect').val() || 'dueDateAsc');
+            refreshStats();
+            input.val('');
+
+            const activeCard = $('.stat-card.active')[0];
+            if (activeCard) filterByStatus(activeCard);
+        },
+        error: function () {
+            alert('Failed to create task');
+        },
+        complete: function () {
+            input.prop('disabled', false).focus();
+        }
+    });
+}
+
+
+
 // ───── create OR edit (shared save button) ─────
 
 $('#saveTaskBtn').on('click', function () {
@@ -304,6 +373,9 @@ function proceedWithSave(title, description, dueDate) {
                 $('#taskGrid').prepend(buildCardHtml(task));
                 sortTasksByDueDate($('#sortSelect').val() || 'dueDateAsc');
                 refreshStats();
+
+                const activeCard = $('.stat-card.active')[0];
+                if (activeCard) filterByStatus(activeCard);
             },
             error: function (xhr) {
                 console.log('create error', xhr.status, xhr.responseText);
@@ -327,6 +399,9 @@ function proceedWithSave(title, description, dueDate) {
                 bootstrap.Modal.getInstance(document.getElementById('taskModal'))?.hide();
                 $(`.task-card[data-id="${id}"]`).replaceWith(buildCardHtml(task));
                 refreshStats();
+
+                const activeCard = $('.stat-card.active')[0];
+                if (activeCard) filterByStatus(activeCard);
             },
             error: function () {
                 alert('Failed to update task');
@@ -340,20 +415,44 @@ function proceedWithSave(title, description, dueDate) {
 }
 
 $('#confirmDuplicateBtn').on('click', function () {
-    const title = $('#taskTitle').val().trim();
-    const description = $('#taskDescription').val().trim();
-    const dueDate = $('#taskDueDate').val();
-
     const modalEl = document.getElementById('duplicateConfirmModal');
     const modalInstance = bootstrap.Modal.getInstance(modalEl);
     if (modalInstance) modalInstance.hide();
 
+    if (quickAddPendingData) {
+        createQuickTask(quickAddPendingData.title);
+        quickAddPendingData = null;
+        return;
+    }
+
+    const title = $('#taskTitle').val().trim();
+    const description = $('#taskDescription').val().trim();
+    const dueDate = $('#taskDueDate').val();
+
     proceedWithSave(title, description, dueDate);
+});
+
+$('#duplicateConfirmModal').on('shown.bs.modal', function () {
+    $('#confirmDuplicateBtn').focus(); // so Enter triggers it by default
+});
+
+$('#duplicateConfirmModal').on('keydown', function (e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        $('#confirmDuplicateBtn').click();
+    }
+});
+
+$('#duplicateConfirmModal').on('hidden.bs.modal', function () {
+    if (quickAddPendingData) {
+        quickAddPendingData = null; // user cancelled, clear pending quick-add
+    }
 });
 
 function reopenTaskModal() {
     new bootstrap.Modal(document.getElementById('taskModal')).show();
 }
+
 
 // ───── recalculate stat cards ─────
 
@@ -361,7 +460,7 @@ function refreshStats() {
     let total = 0, pending = 0, inProgress = 0, done = 0;
     $('.task-card').each(function () {
         total++;
-        const status = $(this).data('task-status');
+        const status = $(this).attr('data-task-status');
         if (status === 'Pending') pending++;
         if (status === 'InProgress') inProgress++;
         if (status === 'Done') done++;
@@ -397,3 +496,21 @@ $(function () {
     sortTasksByDueDate('dueDateAsc');
     $('#sortSelect').val('dueDateAsc');
 });
+
+
+// ───── filter by status ─────
+function filterByStatus(card) {
+    const filter = $(card).data('filter');
+
+    $('.stat-card').removeClass('active');
+    $(card).addClass('active');
+
+    if (!filter) {
+        $('.task-card').show();
+    } else {
+        $('.task-card').each(function () {
+            const status = $(this).attr('data-task-status');
+            $(this).toggle(status === filter);
+        });
+    }
+}

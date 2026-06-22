@@ -11,7 +11,7 @@ namespace TaskManager.Applab.Application.Validators
             RuleFor(x => x.Title)
                 .NotEmpty().WithMessage("Title is requierd")
                 .MinimumLength(3).WithMessage("Title must be at least 3 characters")
-                .MaximumLength(30).WithMessage("Title cannot exceed 30 characters");
+                .MaximumLength(150).WithMessage("Title cannot exceed 150 characters");
 
             RuleFor(x => x.Description)
                 .MaximumLength(500).WithMessage("Description cannot exceed 500 characters");

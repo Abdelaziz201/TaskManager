@@ -28,7 +28,7 @@
     </div>
 
     <div class="stat-cards">
-        <div class="stat-card">
+        <div class="stat-card active" data-filter="" onclick="filterByStatus(this)">
             <div class="stat-icon purple">
                 <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
@@ -36,30 +36,39 @@
             </div>
             <div><h2 id="statTotal">@total</h2><p>Total</p></div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card" data-filter="Pending" onclick="filterByStatus(this)">
             <div class="stat-icon gray">
                 <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <circle cx="12" cy="12" r="10"/><path stroke-linecap="round" d="M12 8v4l3 3"/>
+                    <circle cx="12" cy="12" r="10" />
+                    <path stroke-linecap="round" d="M12 8v4l3 3" />
                 </svg>
             </div>
             <div><h2 id="statPending">@pending</h2><p>Pending</p></div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card" data-filter="InProgress" onclick="filterByStatus(this)">
             <div class="stat-icon yellow">
                 <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <circle cx="12" cy="12" r="10"/><path stroke-linecap="round" d="M12 8v4l3 3"/>
+                    <circle cx="12" cy="12" r="10" />
+                    <path stroke-linecap="round" d="M12 8v4l3 3" />
                 </svg>
             </div>
             <div><h2 id="statInProgress">@inProgress</h2><p>In Progress</p></div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card" data-filter="Done" onclick="filterByStatus(this)">
             <div class="stat-icon green">
                 <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
             </div>
             <div><h2 id="statDone">@done</h2><p>Done</p></div>
         </div>
+    </div>
+
+    <div class="quick-add-bar">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" class="quick-add-icon">
+            <circle cx="12" cy="12" r="9"/>
+        </svg>
+        <input type="text" id="quickAddInput" placeholder="Add a task... (press Enter)" />
     </div>
 
     <div class="task-toolbar">

@@ -13,7 +13,7 @@ public class TaskItemConfiguration : IEntityTypeConfiguration<TaskItem>
 
         entity.Property(t => t.Title)
                .IsRequired()
-               .HasMaxLength(100);
+               .HasMaxLength(150);
 
         entity.Property(t => t.Description)
                 .HasMaxLength(500);

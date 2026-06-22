@@ -19,7 +19,7 @@ public class CreateTaskViewModel
 {
     [Required(ErrorMessage = "Title is requierd")]
     [MinLength(3,ErrorMessage = "Title must be at least 3 characters")]
-    [MaxLength(30, ErrorMessage = "Title cannot exceed 30 characters")]
+    [MaxLength(150, ErrorMessage = "Title cannot exceed 150 characters")]
     public string Title { get; set; } = string.Empty;
 
     [MaxLength(500, ErrorMessage = "Description cannot exceed 500 characters")]
