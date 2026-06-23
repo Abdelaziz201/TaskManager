@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Http;
+
 namespace TaskManager.Applab.Application.DTOs;
 
 public class AttachmentDto

@@ -1,8 +1,7 @@
-﻿using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using TaskManager.Applab.Application.DTOs;
 using TaskManager.Applab.Application.Services;
-using TaskManager.Applab.Domain.Entities;
+
 
 namespace TaskManager.Applab.Api.Controllers
 {
@@ -37,13 +36,7 @@ namespace TaskManager.Applab.Api.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateTaskDto dto)
         {
-            var task = new TaskItem
-            {
-                Title = dto.Title,
-                Description = dto.Description,
-                DueDate = dto.DueDate,
-            };
-            var result = await _taskService.CreateTaskAsync(task);
+            var result = await _taskService.CreateTaskAsync(dto);
             return Ok(result);
         }
 
@@ -51,17 +44,8 @@ namespace TaskManager.Applab.Api.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, [FromBody] CreateTaskDto dto)
         {
-            var existing = await _taskService.GetTaskByIdAsync(id);
-            if (!existing.Success) return NotFound(existing);
-
-            var task = existing.Data!;
-            task.Title = dto.Title;
-            task.Description = dto.Description;
-            task.DueDate = dto.DueDate;
-            task.Status = dto.Status;
-
-            var result = await _taskService.UpdateTaskAsync(task);
-            return Ok(result);
+            var result = await _taskService.UpdateTaskAsync(id, dto);
+            return result.Success ? Ok(result) : NotFound(result);
         }
 
         //Delete /api/task/id

@@ -26,6 +26,23 @@ public class TaskAttachmentRepository : ITaskAttachmentRepository
             .ToListAsync();
     }
 
+    // single task — used by GetTaskByIdAsync / CreateTaskAsync / UpdateTaskAsync
+    public async Task<int> GetCountByTaskIdAsync(int taskId)
+    {
+        return await _context.TaskAttachments
+            .CountAsync(a => a.TaskItemId == taskId);
+    }
+
+    // many tasks at once — used by GetAllTasksAsync, avoids N+1
+    public async Task<Dictionary<int, int>> GetCountsByTaskIdsAsync(List<int> taskIds)
+    {
+        return await _context.TaskAttachments
+            .Where(a => taskIds.Contains(a.TaskItemId))
+            .GroupBy(a => a.TaskItemId)
+            .Select(g => new { TaskItemId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.TaskItemId, x => x.Count);
+    }
+
     public async Task AddAsync(TaskAttachment attachment)
     {
         await _context.TaskAttachments.AddAsync(attachment);

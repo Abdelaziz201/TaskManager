@@ -1,6 +1,6 @@
 let currentMode = 'create'; // 'create' or 'edit'
 let searchTimeout;
-
+let pendingAttachments = [];
 
 
 //search
@@ -50,6 +50,7 @@ function toLocalDateTimeString(date) {
 // open modal for creating
 function openCreateModal() {
     currentMode = 'create';
+    pendingAttachments = [];
     $('#taskModalTitle').text('New Task');
     $('#saveTaskBtnText').text('Create Task');
     $('#taskId').val('');
@@ -68,6 +69,32 @@ function openCreateModal() {
     $('#attachmentsList').empty();
 
     new bootstrap.Modal(document.getElementById('taskModal')).show();
+}
+
+function renderPendingAttachments() {
+    const html = pendingAttachments.map((file, index) => `
+        <div class="attachment-item" data-pending-index="${index}">
+            <span class="attachment-item-name" style="cursor:default;">
+                ${fileIconSvg()} ${file.name}
+            </span>
+            <div class="attachment-item-actions">
+                <button class="attachment-delete-btn" onclick="removePendingAttachment(${index})">Remove</button>
+            </div>
+        </div>
+    `).join('');
+    $('#attachmentsList').html(html);
+}
+
+function removePendingAttachment(index) {
+    pendingAttachments.splice(index, 1);
+    renderPendingAttachments();
+}
+
+function updateCardAttachmentBadge(taskId, count) {
+    const card = $(`.task-card[data-id="${taskId}"]`);
+    card.find('.attachment-badge')
+        .attr('title', `${count} attachment(s)`)
+        .find('.attachment-count').text(count);
 }
 
 // open modal for editing
@@ -93,6 +120,22 @@ function openEditModal(btn) {
 
     new bootstrap.Modal(document.getElementById('taskModal')).show();
 }
+
+$('#taskModal').on('hidden.bs.modal', function () {
+    if (currentMode === 'create') {
+        pendingAttachments = [];
+    }
+});
+
+// function restoreUploadZone() {
+//     $('#uploadZone').html(`
+//         <input type="file" id="fileInput" hidden />
+//         <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+//             <path stroke-linecap="round" stroke-linejoin="round" d="M12 16v-8m0 0l-3 3m3-3l3 3M3 16.2V18a2 2 0 002 2h14a2 2 0 002-2v-1.8" />
+//         </svg>
+//         <span>Click to upload a file</span>
+//     `);
+// }
 
 function fileIconSvg() {
     return `<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -154,103 +197,38 @@ function deleteAttachment(taskId, attachmentId, btn) {
     });
 }
     
-// upload zone click → trigger file input
-$('#uploadZone').on('click', function (e) {
+// upload zone click → trigger file input (delegated so it survives re-render)
+$('#attachmentsSection').on('click', '#uploadZone', function (e) {
     // Prevent handling clicks that originated from the file input itself
     if ($(e.target).is('#fileInput')) return;
     $('#fileInput').click();
 });
 
 // Prevent the file input's click event from bubbling back to the upload zone
-$('#fileInput').on('click', function (e) {
+$('#attachmentsSection').on('click', '#fileInput', function (e) {
     e.stopPropagation();
 });
 
-$('#fileInput').on('change', function () {
+$('#attachmentsSection').on('change', '#fileInput', function () {
     const file = this.files[0];
     if (!file) return;
 
-    const taskId = $('#taskId').val();
-    // If we're creating and there is no taskId yet, create the task first then upload
-    const uploadFile = (taskIdToUse) => {
-        $('#uploadError').text('');
-
-        if (file.size > 5 * 1024 * 1024) {
-            $('#uploadError').text('File exceeds the 5MB limit');
-            $('#fileInput').val('');
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('taskId', taskIdToUse);
-
-        $.ajax({
-            url: '/Task/UploadAttachment?taskId=' + taskIdToUse,
-            type: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            success: function () {
-                loadAttachments(taskIdToUse);
-            },
-            error: function (xhr) {
-                $('#uploadError').text(xhr.responseJSON?.message || 'Upload failed');
-            },
-            complete: function () {
-                $('#fileInput').val('');
-            }
-        });
-    };
-
-    if (!taskId) {
-        // create a minimal task using modal inputs, then upload
-        // Show loading state - not an error
-        const uploadZone = $('#uploadZone');
-        const originalContent = uploadZone.html();
-        uploadZone.html('<span style="color: #6c757d;">Creating task...</span>');
-
-        const title = $('#taskTitle').val().trim() || 'Untitled';
-        const description = $('#taskDescription').val().trim();
-        const dueDate = $('#taskDueDate').val() || toLocalDateTimeString(new Date(Date.now() + 86400000));
-
-        $.ajax({
-            url: '/Task/Create',
-            type: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({ title, description, dueDate }),
-            success: function (task) {
-                // set modal to edit mode so future saves update instead of creating again
-                currentMode = 'edit';
-                $('#taskId').val(task.id);
-                $('#taskModalTitle').text('Edit Task');
-                $('#saveTaskBtnText').text('Save Changes');
-
-                // add task card to grid and refresh
-                $('.empty-state').remove();
-                $('#taskGrid').prepend(buildCardHtml(task));
-                sortTasksByDueDate($('#sortSelect').val() || 'dueDateAsc');
-                refreshStats();
-
-                // now perform the upload
-                uploadFile(task.id);
-            },
-            error: function (xhr) {
-                uploadZone.html(originalContent); // restore original UI
-                $('#uploadError').text('Failed to create task: ' + (xhr.responseJSON?.message || xhr.statusText));
-                $('#fileInput').val('');
-            }
-        });
+    if (file.size > 5 * 1024 * 1024) {
+        $('#uploadError').text('File exceeds the 5MB limit');
+        $('#fileInput').val('');
         return;
     }
 
     $('#uploadError').text('');
 
-    if (file.size > 5 * 1024 * 1024) {
-        $('#uploadError').text('File exceeds the 5MB limit');
-        this.value = '';
+    if (currentMode === 'create') {
+        pendingAttachments.push(file);
+        renderPendingAttachments();
+        $('#fileInput').val('');
         return;
     }
+
+    const taskId = $('#taskId').val();
 
     const formData = new FormData();
     formData.append('file', file);
@@ -273,6 +251,8 @@ $('#fileInput').on('change', function () {
         }
     });
 });
+
+    
 
 // toggle dropdown open/close
 function toggleStatusMenu(btn) {
@@ -402,7 +382,7 @@ function buildCardHtml(task) {
             <h3>${task.title}</h3>
             ${task.description ? `<p>${task.description}</p>` : ''}
             <div class="task-card-footer">
-                <div class="d-flex gap-2 align-items-center flex-wrap">
+                <div class="task-card-footer-row">
                     <div class="status-dropdown" data-task-id="${task.id}">
                         <button type="button" class="status-trigger ${badgeClass}" onclick="toggleStatusMenu(this)">
                             <span class="status-label">${statusLabel}</span>
@@ -416,16 +396,35 @@ function buildCardHtml(task) {
                             <div class="status-option badge-done" data-value="Done" onclick="selectStatus(this)">Done</div>
                         </div>
                     </div>
+
+                    <div class="task-card-actions">
+                        <button class="btn-edit" onclick="openEditModal(this)" title="Edit">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M18.5 2.5a2.121 2.121 0 113 3L12 15l-4 1 1-4 9.5-9.5z" />
+                            </svg>
+                        </button>
+                        <button class="btn-delete" onclick="deleteTask(${task.id}, this)" title="Delete">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0l-1 14a2 2 0 01-2 2H7a2 2 0 01-2-2L4 6h16z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="task-card-footer-row task-card-meta-row">
                     <span class="task-date">
                         <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
                         </svg>
                         ${dateFormatted}
                     </span>
-                </div>
-                <div class="task-card-actions">
-                    <button class="btn-edit" onclick="openEditModal(this)">Edit</button>
-                    <button class="btn-delete" onclick="deleteTask(${task.id}, this)">Delete</button>
+                    <span class="attachment-badge" title="${task.attachmentCount} attachment(s)">
+                        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" />
+                        </svg>
+                        <span class="attachment-count">${task.attachmentCount}</span>
+                    </span>
                 </div>
             </div>
         </div>`;
@@ -548,15 +547,12 @@ function proceedWithSave(title, description, dueDate) {
     $('#saveTaskSpinner').show();
 
     if (currentMode === 'create') {
-        console.log('sending create request...');
         $.ajax({
             url: '/Task/Create',
             type: 'POST',
             contentType: 'application/json',
             data: JSON.stringify({ title, description, dueDate }),
             success: function (task) {
-                console.log('create success', task);
-                bootstrap.Modal.getInstance(document.getElementById('taskModal'))?.hide();
                 $('.empty-state').remove();
                 $('#taskGrid').prepend(buildCardHtml(task));
                 sortTasksByDueDate($('#sortSelect').val() || 'dueDateAsc');
@@ -564,12 +560,19 @@ function proceedWithSave(title, description, dueDate) {
 
                 const activeCard = $('.stat-card.active')[0];
                 if (activeCard) filterByStatus(activeCard);
+
+                // now upload any pending files, in order, sequentially
+                uploadPendingAttachmentsSequentially(task.id, 0, function () {
+                    bootstrap.Modal.getInstance(document.getElementById('taskModal'))?.hide();
+                    $('#saveTaskBtn').prop('disabled', false);
+                    $('#saveTaskSpinner').hide();
+
+                    updateCardAttachmentBadge(task.id, pendingAttachments.length); // ← count from what we just uploaded
+                    pendingAttachments = [];
+                });
             },
             error: function (xhr) {
-                console.log('create error', xhr.status, xhr.responseText);
                 alert('Failed to create task');
-            },
-            complete: function () {
                 $('#saveTaskBtn').prop('disabled', false);
                 $('#saveTaskSpinner').hide();
             }
@@ -600,6 +603,35 @@ function proceedWithSave(title, description, dueDate) {
             }
         });
     }
+}
+
+//uploads pending files one at a time, in array order
+function uploadPendingAttachmentsSequentially(taskId, index, onComplete) {
+    if (index >= pendingAttachments.length) {
+        onComplete();
+        return;
+    }
+
+    const file = pendingAttachments[index];
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('taskId', taskId);
+
+    $.ajax({
+        url: '/Task/UploadAttachment?taskId=' + taskId,
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function () {
+            uploadPendingAttachmentsSequentially(taskId, index + 1, onComplete);
+        },
+        error: function (xhr) {
+            alert(`Failed to upload "${file.name}": ` + (xhr.responseJSON?.message || 'Upload failed'));
+            // continue with the rest even if one fails, so one bad file doesn't block the others
+            uploadPendingAttachmentsSequentially(taskId, index + 1, onComplete);
+        }
+    });
 }
 
 $('#confirmDuplicateBtn').on('click', function () {
