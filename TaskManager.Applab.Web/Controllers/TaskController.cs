@@ -48,7 +48,12 @@ public class TaskController : Controller
         if (redirect != null) return BadRequest(new { message = "Not logged in" });
 
         if (!ModelState.IsValid)
-            return BadRequest(new { message = "Invalid input" });
+        {
+            var errors = ModelState.Values
+                .SelectMany(v => v.Errors)
+                .Select(e => e.ErrorMessage);
+            return BadRequest(new { message = string.Join("; ", errors) });
+        }
 
         AttachToken();
         var response = await _httpClient.PostAsJsonAsync("api/task", new
@@ -155,6 +160,83 @@ public class TaskController : Controller
         }
 
         return Ok(tasks);
+    }
+
+
+    // POST /Task/UploadAttachment
+    [HttpPost]
+    public async Task<IActionResult> UploadAttachment(int taskId, IFormFile file)
+    {
+        var redirect = RedirectIfNotLoggedIn();
+        if (redirect != null) return BadRequest(new { message = "Not logged in" });
+
+        if (file == null || file.Length == 0)
+            return BadRequest(new { message = "No file selected" });
+
+        AttachToken();
+
+        using var content = new MultipartFormDataContent();
+        using var fileStream = file.OpenReadStream();
+        var streamContent = new StreamContent(fileStream);
+        streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
+        content.Add(streamContent, "file", file.FileName);
+
+        var response = await _httpClient.PostAsync($"api/task/{taskId}/attachments", content);
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse<AttachmentViewModel>>();
+
+        if (!response.IsSuccessStatusCode || result == null || !result.Success)
+            return BadRequest(new { message = result?.Message ?? "Upload failed" });
+
+        return Ok(result.Data);
+    }
+
+    // GET /Task/GetAttachments
+    [HttpGet]
+    public async Task<IActionResult> GetAttachments(int taskId)
+    {
+        var redirect = RedirectIfNotLoggedIn();
+        if (redirect != null) return Unauthorized();
+
+        AttachToken();
+        var response = await _httpClient.GetFromJsonAsync<ApiResponse<List<AttachmentViewModel>>>($"api/task/{taskId}/attachments");
+        return Ok(response?.Data ?? new List<AttachmentViewModel>());
+    }
+
+    // GET /Task/DownloadAttachment
+    [HttpGet]
+    public async Task<IActionResult> DownloadAttachment(int taskId, int attachmentId)
+    {
+        var redirect = RedirectIfNotLoggedIn();
+        if (redirect != null) return Unauthorized();
+
+        AttachToken();
+        var response = await _httpClient.GetAsync($"api/task/{taskId}/attachments/{attachmentId}/download");
+
+        if (!response.IsSuccessStatusCode)
+            return NotFound();
+
+        var stream = await response.Content.ReadAsStreamAsync();
+        var contentType = response.Content.Headers.ContentType?.ToString() ?? "application/octet-stream";
+        var fileName = response.Content.Headers.ContentDisposition?.FileName ?? "download";
+
+        return File(stream, contentType, fileName);
+    }
+
+    // POST /Task/DeleteAttachment
+    [HttpPost]
+    public async Task<IActionResult> DeleteAttachment(int taskId, int attachmentId)
+    {
+        var redirect = RedirectIfNotLoggedIn();
+        if (redirect != null) return Unauthorized();
+
+        AttachToken();
+        var response = await _httpClient.DeleteAsync($"api/task/{taskId}/attachments/{attachmentId}");
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse>();
+
+        if (!response.IsSuccessStatusCode || result == null || !result.Success)
+            return BadRequest(new { message = result?.Message ?? "Failed to delete attachment" });
+
+        return Ok();
     }
 }
 

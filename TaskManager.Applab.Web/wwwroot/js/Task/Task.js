@@ -62,6 +62,11 @@ function openCreateModal() {
 
     $('#taskTitleError').text('');
     $('#taskDateError').text('');
+
+    // show attachments section for create as well — allow creating task implicitly when user uploads
+    $('#attachmentsSection').show();
+    $('#attachmentsList').empty();
+
     new bootstrap.Modal(document.getElementById('taskModal')).show();
 }
 
@@ -69,10 +74,11 @@ function openCreateModal() {
 function openEditModal(btn) {
     currentMode = 'edit';
     const card = $(btn).closest('.task-card');
+    const taskId = card.data('id');
 
     $('#taskModalTitle').text('Edit Task');
     $('#saveTaskBtnText').text('Save Changes');
-    $('#taskId').val(card.data('id'));
+    $('#taskId').val(taskId);
     $('#taskTitle').val(card.data('task-title'));
     $('#taskDescription').val(card.data('task-description'));
     dueDatePicker.set('minDate', null); // allow past dates when editing
@@ -81,10 +87,192 @@ function openEditModal(btn) {
     $('#taskTitleError').text('');
     $('#taskDateError').text('');
 
+    $('#attachmentsSection').show();
+    loadAttachments(taskId);
+
+
     new bootstrap.Modal(document.getElementById('taskModal')).show();
 }
 
-// ───── custom status dropdown ─────
+function fileIconSvg() {
+    return `<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+        <path stroke-linecap="round" stroke-linejoin="round" d="M14 2v6h6"/>
+    </svg>`;
+}
+
+function loadAttachments(taskId) {
+    $.ajax({
+        url: '/Task/GetAttachments',
+        type: 'GET',
+        data: { taskId },
+        success: function (attachments) {
+            renderAttachmentsList(taskId, attachments);
+        },
+        error: function () {
+            $('#attachmentsList').html('<span class="text-danger small">Failed to load attachments</span>');
+        }
+    });
+}
+
+function renderAttachmentsList(taskId, attachments) {
+    if (!attachments || attachments.length === 0) {
+        $('#attachmentsList').empty();
+        return;
+    }
+
+    const html = attachments.map(a => `
+        <div class="attachment-item" data-attachment-id="${a.id}">
+            <span class="attachment-item-name" onclick="downloadAttachment(${taskId}, ${a.id})">
+                ${fileIconSvg()} ${a.fileName}
+            </span>
+            <div class="attachment-item-actions">
+                <button class="attachment-delete-btn" onclick="deleteAttachment(${taskId}, ${a.id}, this)">Remove</button>
+            </div>
+        </div>
+    `).join('');
+
+    $('#attachmentsList').html(html);
+}
+
+function downloadAttachment(taskId, attachmentId) {
+    window.open(`/Task/DownloadAttachment?taskId=${taskId}&attachmentId=${attachmentId}`, '_blank');
+}
+
+function deleteAttachment(taskId, attachmentId, btn) {
+    if (!confirm('Remove this attachment?')) return;
+
+    $.ajax({
+        url: `/Task/DeleteAttachment?taskId=${taskId}&attachmentId=${attachmentId}`,
+        type: 'POST',
+        success: function () {
+            $(btn).closest('.attachment-item').remove();
+        },
+        error: function () {
+            alert('Failed to remove attachment');
+        }
+    });
+}
+    
+// upload zone click → trigger file input
+$('#uploadZone').on('click', function (e) {
+    // Prevent handling clicks that originated from the file input itself
+    if ($(e.target).is('#fileInput')) return;
+    $('#fileInput').click();
+});
+
+// Prevent the file input's click event from bubbling back to the upload zone
+$('#fileInput').on('click', function (e) {
+    e.stopPropagation();
+});
+
+$('#fileInput').on('change', function () {
+    const file = this.files[0];
+    if (!file) return;
+
+    const taskId = $('#taskId').val();
+    // If we're creating and there is no taskId yet, create the task first then upload
+    const uploadFile = (taskIdToUse) => {
+        $('#uploadError').text('');
+
+        if (file.size > 5 * 1024 * 1024) {
+            $('#uploadError').text('File exceeds the 5MB limit');
+            $('#fileInput').val('');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('taskId', taskIdToUse);
+
+        $.ajax({
+            url: '/Task/UploadAttachment?taskId=' + taskIdToUse,
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function () {
+                loadAttachments(taskIdToUse);
+            },
+            error: function (xhr) {
+                $('#uploadError').text(xhr.responseJSON?.message || 'Upload failed');
+            },
+            complete: function () {
+                $('#fileInput').val('');
+            }
+        });
+    };
+
+    if (!taskId) {
+        // create a minimal task using modal inputs, then upload
+        // Show loading state - not an error
+        const uploadZone = $('#uploadZone');
+        const originalContent = uploadZone.html();
+        uploadZone.html('<span style="color: #6c757d;">Creating task...</span>');
+
+        const title = $('#taskTitle').val().trim() || 'Untitled';
+        const description = $('#taskDescription').val().trim();
+        const dueDate = $('#taskDueDate').val() || toLocalDateTimeString(new Date(Date.now() + 86400000));
+
+        $.ajax({
+            url: '/Task/Create',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ title, description, dueDate }),
+            success: function (task) {
+                // set modal to edit mode so future saves update instead of creating again
+                currentMode = 'edit';
+                $('#taskId').val(task.id);
+                $('#taskModalTitle').text('Edit Task');
+                $('#saveTaskBtnText').text('Save Changes');
+
+                // add task card to grid and refresh
+                $('.empty-state').remove();
+                $('#taskGrid').prepend(buildCardHtml(task));
+                sortTasksByDueDate($('#sortSelect').val() || 'dueDateAsc');
+                refreshStats();
+
+                // now perform the upload
+                uploadFile(task.id);
+            },
+            error: function (xhr) {
+                uploadZone.html(originalContent); // restore original UI
+                $('#uploadError').text('Failed to create task: ' + (xhr.responseJSON?.message || xhr.statusText));
+                $('#fileInput').val('');
+            }
+        });
+        return;
+    }
+
+    $('#uploadError').text('');
+
+    if (file.size > 5 * 1024 * 1024) {
+        $('#uploadError').text('File exceeds the 5MB limit');
+        this.value = '';
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('taskId', taskId);
+
+    $.ajax({
+        url: '/Task/UploadAttachment?taskId=' + taskId,
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function () {
+            loadAttachments(taskId);
+        },
+        error: function (xhr) {
+            $('#uploadError').text(xhr.responseJSON?.message || 'Upload failed');
+        },
+        complete: function () {
+            $('#fileInput').val('');
+        }
+    });
+});
 
 // toggle dropdown open/close
 function toggleStatusMenu(btn) {

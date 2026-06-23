@@ -12,6 +12,8 @@ namespace TaskManager.Applab.Domain.Entities
         public DateTime DueDate { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        public List<TaskAttachment> Attachments { get; set; } = new();
     }
 
    

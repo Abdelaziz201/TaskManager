@@ -1,16 +1,17 @@
-using TaskManager.Applab.Application.Settings;
-using TaskManager.Applab.Persistence;
-using TaskManager.Applab.Persistence.Repositories;
-using TaskManager.Applab.Application.Interfaces;
-using TaskManager.Applab.Application.Services;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
-using System.Text;
 using FluentValidation;
 using FluentValidation.AspNetCore;
-using TaskManager.Applab.Api.Middleware;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
+using System.Text;
+using TaskManager.Applab.Api.Middleware;
+using TaskManager.Applab.Application.Interfaces;
+using TaskManager.Applab.Application.Services;
+using TaskManager.Applab.Application.Settings;
+using TaskManager.Applab.Application.Validators;
+using TaskManager.Applab.Persistence;
+using TaskManager.Applab.Persistence.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,6 +24,13 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // Task dependencies
 builder.Services.AddScoped<ITaskRepository, TaskRepository>();
 builder.Services.AddScoped<TaskServices>();
+
+//Task file uploads
+builder.Services.Configure<FileStorageSettings>(builder.Configuration.GetSection("FileStorage"));
+builder.Services.AddScoped<IFileStorageService, FileStorageService>();
+builder.Services.AddScoped<ITaskAttachmentRepository, TaskAttachmentRepository>();
+builder.Services.AddScoped<TaskAttachmentService>();
+
 
 // Auth dependencies
 builder.Services.AddScoped<IAuthRepository, AuthRepository>();
@@ -51,7 +59,7 @@ builder.Services.Configure<JwtSettings>(
 
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
-
+builder.Services.AddValidatorsFromAssemblyContaining<UploadAttachmentValidator>();
 // Program.cs
 
 builder.Services.AddControllers().AddJsonOptions(options =>

@@ -12,6 +12,8 @@ public class TaskViewModel
     public string Status { get; set; } = string.Empty;
     public DateTime DueDate { get; set; }
     public DateTime CreatedAt { get; set; }
+    public List<AttachmentViewModel> Attachments { get; set; } = new();
+
 }
 
 
