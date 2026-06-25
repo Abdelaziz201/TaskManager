@@ -3,6 +3,29 @@ let searchTimeout;
 let pendingAttachments = [];
 
 
+function showToast(message, type = 'error') {
+    const toast = $(`
+        <div class="app-toast toast-${type}">
+            <svg class="app-toast-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                ${type === 'error'
+            ? '<circle cx="12" cy="12" r="10"/><path stroke-linecap="round" d="M12 8v4m0 4h.01"/>'
+            : '<path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>'
+        }
+            </svg>
+            <span>${message}</span>
+        </div>
+    `);
+
+    $('#toastContainer').append(toast);
+    requestAnimationFrame(() => toast.addClass('show'));
+
+    setTimeout(() => {
+        toast.removeClass('show');
+        setTimeout(() => toast.remove(), 200);
+    }, 3500);
+}
+
+
 //search
 $('#searchInput').on('input', function () {
     clearTimeout(searchTimeout);
@@ -17,7 +40,7 @@ $('#searchInput').on('input', function () {
                 renderTaskGrid(tasks);
             },
             error: function () {
-                alert('Search failed');
+                showToast('Search failed');
             }
         });
     }, 300);
@@ -223,7 +246,7 @@ $('#confirmDeleteAttachmentBtn').on('click', function () {
             bootstrap.Modal.getInstance(document.getElementById('deleteAttachmentModal'))?.hide();
         },
         error: function () {
-            alert('Failed to remove attachment');
+            showToast('Failed to remove attachment');
         },
         complete: function () {
             btn.prop('disabled', false);
@@ -335,7 +358,7 @@ function selectStatus(option) {
             if (activeCard) filterByStatus(activeCard);
         },
         error: function () {
-            alert('Failed to update status');
+            showToast('Failed to update status');
             location.reload();
         }
     });
@@ -385,7 +408,7 @@ $('#confirmDeleteBtn').on('click', function () {
             if (activeCard) filterByStatus(activeCard);
         },
         error: function () {
-            alert('Failed to delete task');
+            showToast('Failed to delete task');
         },
         complete: function () {
             btn.prop('disabled', false);
@@ -528,7 +551,7 @@ function createQuickTask(title) {
             if (activeCard) filterByStatus(activeCard);
         },
         error: function () {
-            alert('Failed to create task');
+            showToast('Failed to create task');
         },
         complete: function () {
             input.prop('disabled', false).focus();
@@ -610,7 +633,7 @@ function proceedWithSave(title, description, dueDate) {
                 });
             },
             error: function (xhr) {
-                alert('Failed to create task');
+                showToast('Failed to create task');
                 $('#saveTaskBtn').prop('disabled', false);
                 $('#saveTaskSpinner').hide();
             }
@@ -633,7 +656,7 @@ function proceedWithSave(title, description, dueDate) {
                 if (activeCard) filterByStatus(activeCard);
             },
             error: function () {
-                alert('Failed to update task');
+                showToast('Failed to update task');
             },
             complete: function () {
                 $('#saveTaskBtn').prop('disabled', false);
@@ -665,7 +688,7 @@ function uploadPendingAttachmentsSequentially(taskId, index, onComplete) {
             uploadPendingAttachmentsSequentially(taskId, index + 1, onComplete);
         },
         error: function (xhr) {
-            alert(`Failed to upload "${file.name}": ` + (xhr.responseJSON?.message || 'Upload failed'));
+            showToast(`Failed to upload "${file.name}": ` + (xhr.responseJSON?.message || 'Upload failed'));
             // continue with the rest even if one fails, so one bad file doesn't block the others
             uploadPendingAttachmentsSequentially(taskId, index + 1, onComplete);
         }
