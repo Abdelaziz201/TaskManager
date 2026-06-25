@@ -25,11 +25,23 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddScoped<ITaskRepository, TaskRepository>();
 builder.Services.AddScoped<TaskServices>();
 
+
 //Task file uploads
 builder.Services.Configure<FileStorageSettings>(builder.Configuration.GetSection("FileStorage"));
-builder.Services.AddScoped<IFileStorageService, FileStorageService>();
+//if (builder.Environment.IsDevelopment())
+    builder.Services.AddScoped<IFileStorageService, FileStorageService>();
+//else
+    //builder.Services.AddScoped<IFileStorageService, AzureBlobStorageService>(); 
 builder.Services.AddScoped<ITaskAttachmentRepository, TaskAttachmentRepository>();
 builder.Services.AddScoped<TaskAttachmentService>();
+
+//Email-forgot password
+builder.Services.Configure<FrontendSettings>(builder.Configuration.GetSection("Frontend"));
+
+if (builder.Environment.IsDevelopment())
+    builder.Services.AddScoped<IEmailService, ConsoleEmailService>();
+else
+    builder.Services.AddScoped<IEmailService, UnconfiguredEmailService>();
 
 
 // Auth dependencies

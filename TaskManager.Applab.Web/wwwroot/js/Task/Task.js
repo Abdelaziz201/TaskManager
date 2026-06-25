@@ -56,6 +56,7 @@ function openCreateModal() {
     $('#taskId').val('');
     $('#taskTitle').val('');
     $('#taskDescription').val('');
+    $('#uploadError').hide();
 
     const tomorrow = new Date(Date.now() + 86400000);
     dueDatePicker.set('minDate', new Date());
@@ -108,6 +109,7 @@ function openEditModal(btn) {
     $('#taskId').val(taskId);
     $('#taskTitle').val(card.data('task-title'));
     $('#taskDescription').val(card.data('task-description'));
+    $('#uploadError').hide();
     dueDatePicker.set('minDate', null); // allow past dates when editing
     dueDatePicker.setDate(card.data('task-duedate'), true);
 
@@ -164,38 +166,70 @@ function renderAttachmentsList(taskId, attachments) {
         return;
     }
 
-    const html = attachments.map(a => `
-        <div class="attachment-item" data-attachment-id="${a.id}">
-            <span class="attachment-item-name" onclick="downloadAttachment(${taskId}, ${a.id})">
-                ${fileIconSvg()} ${a.fileName}
-            </span>
-            <div class="attachment-item-actions">
-                <button class="attachment-delete-btn" onclick="deleteAttachment(${taskId}, ${a.id}, this)">Remove</button>
+    const html = attachments.map(a => {
+        const canPreview = a.contentType && (
+            a.contentType.startsWith('image/') || a.contentType === 'application/pdf'
+        );
+
+        const previewBtn = canPreview
+            ? `<button class="attachment-preview-btn" onclick="previewAttachment(${taskId}, ${a.id})">Preview</button>`
+            : '';
+
+        return `
+            <div class="attachment-item" data-attachment-id="${a.id}">
+                <span class="attachment-item-name" onclick="downloadAttachment(${taskId}, ${a.id})">
+                    ${fileIconSvg()} ${a.fileName}
+                </span>
+                <div class="attachment-item-actions">
+                    ${previewBtn}
+                    <button class="attachment-delete-btn" onclick="deleteAttachment(${taskId}, ${a.id}, this)">Remove</button>
+                </div>
             </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 
     $('#attachmentsList').html(html);
+}
+
+function previewAttachment(taskId, attachmentId) {
+    window.open(`/Task/PreviewAttachment?taskId=${taskId}&attachmentId=${attachmentId}`, '_blank');
 }
 
 function downloadAttachment(taskId, attachmentId) {
     window.open(`/Task/DownloadAttachment?taskId=${taskId}&attachmentId=${attachmentId}`, '_blank');
 }
 
+let attachmentIdToDelete = null;
+let taskIdForAttachmentDelete = null;
+let attachmentBtnToRemove = null;
+
 function deleteAttachment(taskId, attachmentId, btn) {
-    if (!confirm('Remove this attachment?')) return;
+    taskIdForAttachmentDelete = taskId;
+    attachmentIdToDelete = attachmentId;
+    attachmentBtnToRemove = btn;
+    new bootstrap.Modal(document.getElementById('deleteAttachmentModal')).show();
+}
+
+$('#confirmDeleteAttachmentBtn').on('click', function () {
+    const btn = $(this);
+    if (btn.prop('disabled')) return;
+    btn.prop('disabled', true);
 
     $.ajax({
-        url: `/Task/DeleteAttachment?taskId=${taskId}&attachmentId=${attachmentId}`,
+        url: `/Task/DeleteAttachment?taskId=${taskIdForAttachmentDelete}&attachmentId=${attachmentIdToDelete}`,
         type: 'POST',
         success: function () {
-            $(btn).closest('.attachment-item').remove();
+            $(attachmentBtnToRemove).closest('.attachment-item').remove();
+            bootstrap.Modal.getInstance(document.getElementById('deleteAttachmentModal'))?.hide();
         },
         error: function () {
             alert('Failed to remove attachment');
+        },
+        complete: function () {
+            btn.prop('disabled', false);
         }
     });
-}
+});
     
 // upload zone click → trigger file input (delegated so it survives re-render)
 $('#attachmentsSection').on('click', '#uploadZone', function (e) {
@@ -214,12 +248,13 @@ $('#attachmentsSection').on('change', '#fileInput', function () {
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-        $('#uploadError').text('File exceeds the 5MB limit');
+        $('#uploadError').text('File exceeds the 5MB limit').show();
+
         $('#fileInput').val('');
         return;
     }
 
-    $('#uploadError').text('');
+    $('#uploadError').hide();
 
     if (currentMode === 'create') {
         pendingAttachments.push(file);
@@ -242,9 +277,12 @@ $('#attachmentsSection').on('change', '#fileInput', function () {
         contentType: false,
         success: function () {
             loadAttachments(taskId);
+            $.get('/Task/GetAttachments', { taskId }, function (attachments) {
+                updateCardAttachmentBadge(taskId, (attachments || []).length);
+            });
         },
         error: function (xhr) {
-            $('#uploadError').text(xhr.responseJSON?.message || 'Upload failed');
+            $('#uploadError').text(xhr.responseJSON?.message || 'Upload failed').show();
         },
         complete: function () {
             $('#fileInput').val('');

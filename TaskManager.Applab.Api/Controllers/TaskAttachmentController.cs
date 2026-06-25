@@ -42,7 +42,7 @@ public class TaskAttachmentController : ControllerBase
         }
 
         using var stream = file.OpenReadStream();
-        var result = await _attachmentService.UploadAsync(dto, stream);   // ⬅ now passes dto + stream
+        var result = await _attachmentService.UploadAsync(dto, stream);   
 
         return result.Success ? Ok(result) : BadRequest(result);
     }
@@ -55,6 +55,17 @@ public class TaskAttachmentController : ControllerBase
         return Ok(result);
     }
 
+    // GET /api/task/5/attachments/12/preview
+    [HttpGet("{attachmentId}/preview")]
+    public async Task<IActionResult> Preview(int taskId, int attachmentId)
+    {
+        var result = await _attachmentService.DownloadAsync(attachmentId);
+        if (result == null) return NotFound();
+
+        Response.Headers["Content-Disposition"] = $"inline; filename=\"{result.Value.fileName}\"";
+        return File(result.Value.stream, result.Value.contentType);
+    }
+
     // GET /api/task/5/attachments/12/download
     [HttpGet("{attachmentId}/download")]
     public async Task<IActionResult> Download(int taskId, int attachmentId)
@@ -62,8 +73,7 @@ public class TaskAttachmentController : ControllerBase
         var result = await _attachmentService.DownloadAsync(attachmentId);
         if (result == null) return NotFound();
 
-        Response.Headers["Content-Disposition"] = $"inline; filename=\"{result.Value.fileName}\"";
-        return File(result.Value.stream, result.Value.contentType);
+        return File(result.Value.stream, result.Value.contentType, result.Value.fileName);
     }
 
     // DELETE /api/task/5/attachments/12

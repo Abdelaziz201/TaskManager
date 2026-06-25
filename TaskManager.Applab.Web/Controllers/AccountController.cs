@@ -92,6 +92,58 @@ public class AccountController : Controller
         HttpContext.Session.Clear();
         return RedirectToAction("Login");
     }
+
+
+
+    // GET /Account/ForgotPassword
+    public IActionResult ForgotPassword() => View();
+
+    // POST /Account/ForgotPassword
+    [HttpPost]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordViewModel model)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(new { message = "Invalid input" });
+
+        var response = await _httpClient.PostAsJsonAsync("api/auth/forgot-password", new { model.Email });
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse<string>>();
+
+        // The API always returns the same generic message — pass it straight through.
+        return Ok(new { message = result?.Message ?? "If that email is registered, a password reset link has been sent." });
+    }
+
+    // GET /Account/ResetPassword?token=...
+    public IActionResult ResetPassword(string token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+            return RedirectToAction("Login");
+
+        return View(new ResetPasswordViewModel { Token = token });
+    }
+
+    // POST /Account/ResetPassword
+    [HttpPost]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordViewModel model)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(new { message = "Invalid input" });
+
+        var response = await _httpClient.PostAsJsonAsync("api/auth/reset-password", new
+        {
+            model.Token,
+            model.NewPassword
+        });
+
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse<string>>();
+
+        if (!response.IsSuccessStatusCode || result == null || !result.Success)
+            return BadRequest(new { message = result?.Message ?? "Could not reset password." });
+
+        return Ok(new { redirectUrl = Url.Action("Login", "Account") });
+    }
+
+
 }
+
 
 public record TokenResponse(string Token);

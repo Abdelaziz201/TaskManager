@@ -550,6 +550,18 @@
     font-size: 0.78rem;
 }
 
+.attachment-preview-btn {
+    background: none;
+    border: none;
+    color: var(--purple);
+    cursor: pointer;
+    font-size: 0.78rem;
+}
+
+    .attachment-preview-btn:hover {
+        text-decoration: underline;
+    }
+
 .upload-zone {
     border: 1.5px dashed var(--gray-border);
     border-radius: 10px;
@@ -567,4 +579,26 @@
     .upload-zone:hover {
         border-color: var(--purple);
         color: var(--purple);
+    }
+
+   
+
+
+    /*upload error*/
+.upload-error-box {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: #FEF2F2;
+    color: #B91C1C;
+    border: 1px solid #FECACA;
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.82rem;
+    margin-top: 0.5rem;
+}
+
+    .upload-error-box::before {
+        content: "⚠";
+        flex-shrink: 0;
     }

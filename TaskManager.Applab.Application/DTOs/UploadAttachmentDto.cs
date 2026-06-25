@@ -8,7 +8,7 @@ public class UploadAttachmentDto
     public string FileName { get; set; } = string.Empty;
     public string ContentType { get; set; } = string.Empty;
 
-    public IFormFile UploadedFile { get; set; }
+   // public IFormFile UploadedFile { get; set; }
 
     public long FileSizeBytes { get; set; }
 }

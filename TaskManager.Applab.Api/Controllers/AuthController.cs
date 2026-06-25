@@ -31,4 +31,20 @@ namespace TaskManager.Applab.Api.Controllers;
         var result = await _authservice.LoginAsync(dto);
         return result.Success ? Ok(result) : Unauthorized(result);
     }
+
+    //post /api/auth/forgot-password
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
+    {
+        var result = await _authservice.ForgotPasswordAsync(dto);
+        return Ok(result); // always 200 — the message is identical whether or not the email exists
     }
+
+    //post /api/auth/reset-password
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
+    {
+        var result = await _authservice.ResetPasswordAsync(dto);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+}

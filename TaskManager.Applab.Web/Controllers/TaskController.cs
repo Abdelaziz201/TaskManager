@@ -222,6 +222,27 @@ public class TaskController : Controller
         return File(stream, contentType, fileName);
     }
 
+
+    // GET /Task/PreviewAttachment
+    [HttpGet]
+    public async Task<IActionResult> PreviewAttachment(int taskId, int attachmentId)
+    {
+        var redirect = RedirectIfNotLoggedIn();
+        if (redirect != null) return Unauthorized();
+
+        AttachToken();
+        var response = await _httpClient.GetAsync($"api/task/{taskId}/attachments/{attachmentId}/preview");
+
+        if (!response.IsSuccessStatusCode)
+            return NotFound();
+
+        var stream = await response.Content.ReadAsStreamAsync();
+        var contentType = response.Content.Headers.ContentType?.ToString() ?? "application/octet-stream";
+
+        return File(stream, contentType);
+    }
+
+
     // POST /Task/DeleteAttachment
     [HttpPost]
     public async Task<IActionResult> DeleteAttachment(int taskId, int attachmentId)

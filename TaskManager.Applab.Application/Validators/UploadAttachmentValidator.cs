@@ -5,7 +5,13 @@ namespace TaskManager.Applab.Application.Validators
 {
     public class UploadAttachmentValidator : AbstractValidator<UploadAttachmentDto>
     {
-        private static readonly string[] BlockedExtensions = { ".exe", ".bat", ".cmd", ".sh", ".dll", ".msi" };
+        private static readonly string[] AllowedExtensions =
+{
+    ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
+    ".txt", ".csv", ".rtf",
+    ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg",
+    ".zip"
+};
 
         public UploadAttachmentValidator()
         {
@@ -15,7 +21,7 @@ namespace TaskManager.Applab.Application.Validators
             RuleFor(x => x.FileName)
                 .NotEmpty().WithMessage("File name is required")
                 .MaximumLength(255).WithMessage("File name cannot exceed 255 characters")
-                .Must(name => !BlockedExtensions.Contains(Path.GetExtension(name).ToLowerInvariant()))
+                .Must(name => AllowedExtensions.Contains(Path.GetExtension(name).ToLowerInvariant()))
                 .WithMessage("This file type is not allowed for security reasons");
 
             RuleFor(x => x.FileSizeBytes)
