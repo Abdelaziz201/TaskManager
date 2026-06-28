@@ -359,7 +359,7 @@ function selectStatus(option) {
         },
         error: function () {
             showToast('Failed to update status');
-            location.reload();
+            //location.reload();
         }
     });
 }

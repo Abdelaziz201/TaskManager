@@ -16,7 +16,7 @@ $('#resetBtn').on('click', function () {
         url: '/Account/ResetPassword',
         type: 'POST',
         contentType: 'application/json',
-        data: JSON.stringify({ token, newPassword }),
+        data: JSON.stringify({ token, newPassword, confirmPassword}),
         success: function (response) {
             window.location.href = response.redirectUrl;
         },
